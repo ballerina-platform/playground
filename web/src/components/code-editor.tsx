@@ -16,6 +16,15 @@ interface CodeEditorProps {
 const sharedClasses =
     "p-4 leading-[22.5px] font-sans whitespace-pre overflow-auto absolute inset-0 box-border [tab-size:2]";
 
+function escapeHtml(html: string) {
+    return html
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 export function CodeEditor({
     value = "",
     onChange,
@@ -48,7 +57,7 @@ export function CodeEditor({
                     .replace(/<\/code><\/pre>$/, "");
                 setHighlighted(inner);
             } catch {
-                setHighlighted(code);
+                setHighlighted(escapeHtml(code));
             }
         },
         [language],
@@ -77,7 +86,7 @@ export function CodeEditor({
             highlighterRef.current?.dispose();
             highlighterRef.current = null;
         };
-    }, [renderHighlight, value]);
+    }, [renderHighlight]); // eslint-disable-line react-hooks/exhaustive-deps
 
     React.useEffect(() => {
         renderHighlight(value);

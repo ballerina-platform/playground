@@ -22,6 +22,7 @@ jobs:
           cache: true
           cache-dependency-path: |
             wasm/go.mod
+            wasm/go.sum
 
       - name: Build ballerina.wasm
         working-directory: wasm
@@ -34,7 +35,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "latest"
+          bun-version: "1.3.10"
 
       - name: Install web dependencies
         working-directory: web

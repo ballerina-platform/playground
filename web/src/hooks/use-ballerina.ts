@@ -3,7 +3,7 @@ import "@/wasm_exec";
 import * as React from "react";
 
 export function useBallerina() {
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [isReady, setIsReady] = React.useState(false);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -15,11 +15,11 @@ export function useBallerina() {
                 go.importObject,
             );
             go.run(result.instance);
-            if (!cancelled) setIsLoading(true);
+            if (!cancelled) setIsReady(true);
         }
 
         load().catch(() => {
-            if (!cancelled) setIsLoading(false);
+            if (!cancelled) setIsReady(false);
         });
 
         return () => {
@@ -52,5 +52,5 @@ export function useBallerina() {
         return null;
     }
 
-    return { isReady: isLoading, updateFile, run };
+    return { isReady, updateFile, run };
 }

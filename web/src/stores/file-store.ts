@@ -35,7 +35,17 @@ export const useFileStore = create<FileState & FileActions>((set) => ({
     tree: DEFAULT_TREE,
     selectedFilePath: DEFAULT_SELECTED_FILE_PATH,
 
-    setTree: (tree) => set({ tree }),
+    setTree: (tree) => set((state) => {
+        const selected = state.selectedFilePath
+                ? getNode(tree, state.selectedFilePath)
+                : null;
+        return {
+            tree,
+            selectedFilePath: selected && selected.kind === "file"
+                ? state.selectedFilePath
+                : null,
+        }
+    }),
 
     selectFile: (path) =>
         set((state) => {

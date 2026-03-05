@@ -1,6 +1,13 @@
-## Ballerina Playground
+# Ballerina Playground
 
 Ballerina playground is a web based tool which allows trying out language features.
+
+## Getting started
+
+### Prerequisites
+
+- Go 1.26 or later
+- Bun
 
 ### Code structure
 
@@ -8,10 +15,6 @@ Ballerina playground is a web based tool which allows trying out language featur
 - `wasm/ballerina-lang-go/`: `ballerina-lang-go` git submodule providing the compiler/frontend used by the WASM runtime.
 - `web/`: Web frontend that loads `ballerina.wasm` and provides the editor/runner UI.
 - `scripts/`: Supporting scripts used for development and maintenance tasks.
-
-### Getting started
-
-- **Prereqs**: Go (1.26 or later), Bun
 
 Build the WASM binary (outputs to `web/public/ballerina.wasm`):
 
@@ -27,4 +30,3 @@ cd web
 bun install
 bun run dev
 ```
-
