@@ -1,17 +1,17 @@
 [
-  {
-    "kind": "file",
-    "name": "01-orders.bal",
-    "content": "import ballerina/io;\n\n// Shows pending orders with delivery fees\ntype Order record {|\n    string id;\n    string customer;\n    int amount;\n    string zone;\n|};\n\npublic function main() {\n    Order[] orders = [\n        {id: \"ORD001\", customer: \"Alice\", amount: 150, zone: \"Downtown\"},\n        {id: \"ORD002\", customer: \"Bob\", amount: 75, zone: \"Suburb\"},\n        {id: \"ORD003\", customer: \"Carol\", amount: 200, zone: \"Downtown\"}\n    ];\n    map\u003cint\u003e deliveryFee = {\"Downtown\": 5, \"Suburb\": 10};\n\n    io:println(\"=== Pending Orders ===\");\n    foreach int i in 0 ..\u003c orders.length() {\n        Order ord = orders[i];\n        io:println(i + 1, \". \", ord.id, \" | \",\n                ord.customer, \" | $\", ord.amount,\n                \" | \", ord.zone, \" (fee: $\", deliveryFee[ord.zone], \")\");\n    }\n}\n\n"
-  },
-  {
-    "kind": "file",
-    "name": "02-response-aggregator.bal",
-    "content": "import ballerina/io;\n\n// Aggregates responses from multiple API endpoints, categorizes them by status\n// and flags, and processes mixed result types.\ntype ApiResponse record {|\n    string ep;\n    int status;\n    int flags;\n    any result;\n|};\n\npublic function main() {\n    // Response flags\n    int cached = 1 \u003c\u003c 0;\n    int partial = 1 \u003c\u003c 1;\n    int paginated = 1 \u003c\u003c 2;\n\n    ApiResponse[] responses = [\n        {ep: \"/users\", status: 200, flags: cached, result: 150},\n        {ep: \"/orders\", status: 200, flags: cached + paginated, result: \"paginated\"},\n        {ep: \"/products\", status: 206, flags: partial, result: 42}\n    ];\n    [string, int] healthCheck = [\"/health\", 200];\n\n    io:println(\"Health Check: \", healthCheck[0], \" (\", healthCheck[1], \")\");\n\n    foreach ApiResponse res in responses {\n        io:println(\"\\nEndpoint: \", res.ep, \",\\n  Status: \", res.status);\n\n        if res.flags \u003e= paginated {\n            io:println(\"  [Paginated]\");\n        } else if res.flags == cached {\n            io:println(\"  [Cached]\");\n        } else {\n            io:println(\"  [Partial]\");\n        }\n\n        any result = res.result;\n        if result is int {\n            int count = \u003cint\u003eresult;\n            io:println(\"  Count: \", count);\n        } else if result is string {\n            io:println(\"  Info: \", result);\n        }\n    }\n}\n"
-  },
-  {
-    "kind": "file",
-    "name": "03-fibonacci.bal",
-    "content": "import ballerina/io;\n\npublic function main() {\n    int n = 10;\n    int i = 0;\n    while (i \u003c n) {\n        io:println(\"F(\", i, \") = \", fibonacci(i));\n        i += 1;\n    }\n}\n\nfunction fibonacci(int n) returns int {\n    if (n \u003c= 1) {\n        return n;\n    }\n    int prev = 0;\n    int curr = 1;\n    int i = 2;\n    while (i \u003c= n) {\n        int next = prev + curr;\n        prev = curr;\n        curr = next;\n        i += 1;\n    }\n    return curr;\n}"
-  }
+	{
+		"kind": "file",
+		"name": "01-orders.bal",
+		"content": "import ballerina/io;\n\n// Shows pending orders with delivery fees\ntype Order record {|\n    string id;\n    string customer;\n    int amount;\n    string zone;\n|};\n\npublic function main() {\n    Order[] orders = [\n        {id: \"ORD001\", customer: \"Alice\", amount: 150, zone: \"Downtown\"},\n        {id: \"ORD002\", customer: \"Bob\", amount: 75, zone: \"Suburb\"},\n        {id: \"ORD003\", customer: \"Carol\", amount: 200, zone: \"Downtown\"}\n    ];\n    map\u003cint\u003e deliveryFee = {\"Downtown\": 5, \"Suburb\": 10};\n\n    io:println(\"=== Pending Orders ===\");\n    foreach int i in 0 ..\u003c orders.length() {\n        Order ord = orders[i];\n        io:println(i + 1, \". \", ord.id, \" | \",\n                ord.customer, \" | $\", ord.amount,\n                \" | \", ord.zone, \" (fee: $\", deliveryFee[ord.zone], \")\");\n    }\n}\n\n"
+	},
+	{
+		"kind": "file",
+		"name": "02-response-aggregator.bal",
+		"content": "import ballerina/io;\n\n// Aggregates responses from multiple API endpoints, categorizes them by status\n// and flags, and processes mixed result types.\ntype ApiResponse record {|\n    string ep;\n    int status;\n    int flags;\n    any result;\n|};\n\npublic function main() {\n    // Response flags\n    int cached = 1 \u003c\u003c 0;\n    int partial = 1 \u003c\u003c 1;\n    int paginated = 1 \u003c\u003c 2;\n\n    ApiResponse[] responses = [\n        {ep: \"/users\", status: 200, flags: cached, result: 150},\n        {ep: \"/orders\", status: 200, flags: cached + paginated, result: \"paginated\"},\n        {ep: \"/products\", status: 206, flags: partial, result: 42}\n    ];\n    [string, int] healthCheck = [\"/health\", 200];\n\n    io:println(\"Health Check: \", healthCheck[0], \" (\", healthCheck[1], \")\");\n\n    foreach ApiResponse res in responses {\n        io:println(\"\\nEndpoint: \", res.ep, \",\\n  Status: \", res.status);\n\n        if res.flags \u003e= paginated {\n            io:println(\"  [Paginated]\");\n        } else if res.flags == cached {\n            io:println(\"  [Cached]\");\n        } else {\n            io:println(\"  [Partial]\");\n        }\n\n        any result = res.result;\n        if result is int {\n            int count = \u003cint\u003eresult;\n            io:println(\"  Count: \", count);\n        } else if result is string {\n            io:println(\"  Info: \", result);\n        }\n    }\n}\n"
+	},
+	{
+		"kind": "file",
+		"name": "03-fibonacci.bal",
+		"content": "import ballerina/io;\n\npublic function main() {\n    int n = 10;\n    int i = 0;\n    while (i \u003c n) {\n        io:println(\"F(\", i, \") = \", fibonacci(i));\n        i += 1;\n    }\n}\n\nfunction fibonacci(int n) returns int {\n    if (n \u003c= 1) {\n        return n;\n    }\n    int prev = 0;\n    int curr = 1;\n    int i = 2;\n    while (i \u003c= n) {\n        int next = prev + curr;\n        prev = curr;\n        curr = next;\n        i += 1;\n    }\n    return curr;\n}"
+	}
 ]
