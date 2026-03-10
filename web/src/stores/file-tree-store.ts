@@ -9,14 +9,12 @@ const DEFAULT_MAIN_BAL = `import ballerina/io;
 
 public function main() {
     io:println("Hello, World!");
-}
-`
+}`;
 
 const DEFAULT_BALLERINA_TOML = `[package]
 org = "playground"
 name = "{name}"
-version = "0.1.0"
-`
+version = "0.1.0"`;
 
 export type ActiveFile = {
 	path: string;
@@ -25,7 +23,12 @@ export type ActiveFile = {
 };
 
 export type FileOperationDialog = {
-	type: "new-file" | "new-folder" | "new-package" | "rename-file" | "rename-folder";
+	type:
+	| "new-file"
+	| "new-folder"
+	| "new-package"
+	| "rename-file"
+	| "rename-folder";
 	path: string;
 	defaultName?: string;
 } | null;
@@ -54,6 +57,8 @@ type FileTreeActions = {
 	deleteDir(path: string): boolean;
 
 	updateFileContent(content: string): void;
+
+	exists(path: string): boolean;
 
 	createNewFile(path: string): boolean;
 	createNewDir(path: string): boolean;
@@ -181,6 +186,14 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 				});
 			},
 
+			exists(path) {
+				try {
+					return !!_fs().stat(path);
+				} catch {
+					return false;
+				}
+			},
+
 			createNewFile(path) {
 				const result = _fs().writeFile(path, "");
 				if (!result) return false;
@@ -202,10 +215,14 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 				if (!dirResult) return false;
 				const tomlPath = `${dirPath}/Ballerina.toml`;
 				const balPath = `${dirPath}/main.bal`;
-				const tomlResult = _fs().writeFile(tomlPath, DEFAULT_BALLERINA_TOML.replace("{name}", name));
+				const tomlResult = _fs().writeFile(
+					tomlPath,
+					DEFAULT_BALLERINA_TOML.replace("{name}", name),
+				);
 				const balResult = _fs().writeFile(balPath, DEFAULT_MAIN_BAL);
 				if (!tomlResult || !balResult) return false;
 				get()._syncTrees();
+				get().openFile(balPath);
 				return true;
 			},
 
@@ -258,8 +275,7 @@ export const useActiveFilePath = () =>
 export const useFileOperationDialog = () =>
 	useFileTreeStore((s) => s.fileOperationDialog);
 
-export const useExpandedPaths = () =>
-	useFileTreeStore((s) => s.expandedPaths);
+export const useExpandedPaths = () => useFileTreeStore((s) => s.expandedPaths);
 
 export const useFileTreeActions = () =>
 	useFileTreeStore(
@@ -272,6 +288,7 @@ export const useFileTreeActions = () =>
 			createDir: s.createDir,
 			deleteDir: s.deleteDir,
 			updateFileContent: s.updateFileContent,
+			exists: s.exists,
 			createNewFile: s.createNewFile,
 			createNewDir: s.createNewDir,
 			createNewPackage: s.createNewPackage,

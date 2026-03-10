@@ -15,15 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogDescription,
-	DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -43,12 +34,14 @@ import {
 	SidebarSeparator,
 	useSidebar,
 } from "@/components/ui/sidebar";
+
+import { FileTreeDialog } from "@/components/file-tree-dialog";
+
 import {
 	useActiveFilePath,
 	useFileTreeActions,
 	useLocalTree,
 	useTempTree,
-	useFileOperationDialog,
 	useExpandedPaths,
 } from "@/stores/file-tree-store";
 
@@ -252,131 +245,6 @@ function FileTreeNode({ node, path, defaultOpen }: FileTreeNodeProps) {
 	return <FileTreeDirNode node={node} path={path} defaultOpen={defaultOpen} />;
 }
 
-type FileTreeGroupProps = {
-	label: string;
-	nodes: FileNode[];
-	basePath: string;
-};
-
-function FileTreeGroup({ label, nodes, basePath }: FileTreeGroupProps) {
-	const activeFilePath = useActiveFilePath();
-	return (
-		<SidebarGroup>
-			<SidebarGroupLabel>{label}</SidebarGroupLabel>
-			<SidebarGroupContent className="mt-2">
-				<SidebarMenu>
-					{nodes.map((node, index) => {
-						const path = `${basePath}/${node.name}`;
-						return (
-							<FileTreeNode
-								key={node.name}
-								node={node}
-								path={path}
-								defaultOpen={
-									index === 0 || !!activeFilePath?.startsWith(`${path}/`)
-								}
-							/>
-						);
-					})}
-				</SidebarMenu>
-			</SidebarGroupContent>
-		</SidebarGroup>
-	);
-}
-
-function FileTreeDialog() {
-	const fileOperationDialog = useFileOperationDialog();
-	const {
-		createNewFile,
-		createNewDir,
-		createNewPackage,
-		renameFile,
-		setFileOperationDialog,
-	} = useFileTreeActions();
-
-	const handleOpenChange = (open: boolean) => {
-		if (!open) setFileOperationDialog(null);
-	};
-
-	const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = (e) => {
-		e.preventDefault();
-		if (!fileOperationDialog) return;
-
-		const formData = new FormData(e.currentTarget);
-		const name = formData.get("name") as string;
-		if (!name?.trim()) return;
-
-		const { type, path } = fileOperationDialog;
-
-		if (type === "new-file") {
-			createNewFile(`${path}/${name}`);
-		} else if (type === "new-folder") {
-			createNewDir(`${path}/${name}`);
-		} else if (type === "new-package") {
-			createNewPackage(path, name);
-		} else if (type === "rename-file" || type === "rename-folder") {
-			const lastSlash = path.lastIndexOf("/");
-			const newPath =
-				lastSlash >= 0 ? path.slice(0, lastSlash + 1) + name : `/${name}`;
-			renameFile(path, newPath);
-		}
-
-		setFileOperationDialog(null);
-	};
-
-	if (!fileOperationDialog) return null;
-
-	const type = fileOperationDialog.type;
-	const isRename = type.startsWith("rename");
-
-	const metaByType = {
-		"new-file": { entityLabel: "File", placeholder: "main.bal" },
-		"new-folder": { entityLabel: "Folder", placeholder: "folder_name" },
-		"new-package": { entityLabel: "Package", placeholder: "package_name" },
-		"rename-file": { entityLabel: "File", placeholder: "main.bal" },
-		"rename-folder": { entityLabel: "Folder", placeholder: "folder_name" },
-	} as const;
-
-	const meta = metaByType[type];
-	const { entityLabel, placeholder } = meta;
-
-	const title = `${isRename ? "Rename" : "Create New"} ${entityLabel}`;
-
-	const description = isRename
-		? `Enter a new name for the ${entityLabel.toLowerCase()}.`
-		: `Enter a name for the ${entityLabel.toLowerCase()}.`;
-
-	return (
-		<Dialog open={!!fileOperationDialog} onOpenChange={handleOpenChange}>
-			<DialogContent>
-				<form onSubmit={handleSubmit} className="flex flex-col gap-4">
-					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
-						<DialogDescription>{description}</DialogDescription>
-					</DialogHeader>
-					<Input
-						name="name"
-						placeholder={placeholder}
-						defaultValue={fileOperationDialog.defaultName}
-						autoFocus
-						autoComplete="off"
-					/>
-					<DialogFooter>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => setFileOperationDialog(null)}
-						>
-							Cancel
-						</Button>
-						<Button type="submit">{isRename ? "Rename" : "Create"}</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
-	);
-}
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const isMobile = useIsMobile();
 
@@ -389,12 +257,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
 		<Sidebar {...props}>
 			<SidebarContent>
-				{/* <FileTreeGroup label="Examples" nodes={tempTree} basePath="/tmp" /> */}
-				{/* <SidebarSeparator /> */}
-				{/* {!!localTree.length && ( */}
-				{/* <FileTreeGroup label="Localspace" nodes={localTree} basePath="/local" /> */}
-				{/* )} */}
-
 				<SidebarGroup>
 					<SidebarGroupLabel>Examples</SidebarGroupLabel>
 					<SidebarGroupContent className="mt-2">
