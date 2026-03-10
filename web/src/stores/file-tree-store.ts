@@ -5,17 +5,40 @@ import { immer } from "zustand/middleware/immer";
 import type { LayeredFS } from "@/lib/fs/layered-fs";
 import type { FileNode } from "@/lib/fs/core/file-node.types";
 
+const DEFAULT_MAIN_BAL = `import ballerina/io;
+
+public function main() {
+    io:println("Hello, World!");
+}
+`
+
+const DEFAULT_BALLERINA_TOML = `[package]
+org = "playground"
+name = "{name}"
+version = "0.1.0"
+`
+
 export type ActiveFile = {
 	path: string;
 	content: string;
 	dirty: boolean;
 };
 
+export type FileOperationDialog = {
+	type: "new-file" | "new-folder" | "new-package" | "rename-file" | "rename-folder";
+	path: string;
+	defaultName?: string;
+} | null;
+
 type FileTreeState = {
 	tempTree: FileNode[];
 	localTree: FileNode[];
 	activeFile: ActiveFile | null;
 	ready: boolean;
+
+	fileOperationDialog: FileOperationDialog;
+
+	expandedPaths: Set<string>;
 };
 
 type FileTreeActions = {
@@ -35,6 +58,14 @@ type FileTreeActions = {
 	createNewFile(path: string): boolean;
 	createNewDir(path: string): boolean;
 
+	createNewPackage(path: string, name: string): boolean;
+
+	setFileOperationDialog(dialog: FileOperationDialog): void;
+
+	toggleDir(path: string): void;
+	expandDir(path: string): void;
+	collapseDir(path: string): void;
+
 	_syncTrees(): void;
 };
 
@@ -52,6 +83,8 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 			localTree: [],
 			activeFile: null,
 			ready: false,
+			fileOperationDialog: null,
+			expandedPaths: new Set<string>(),
 
 			init(instance) {
 				if (fs) return;
@@ -163,6 +196,47 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 				return true;
 			},
 
+			createNewPackage(path, name) {
+				const dirPath = `${path}/${name}`;
+				const dirResult = _fs().mkdirAll(dirPath);
+				if (!dirResult) return false;
+				const tomlPath = `${dirPath}/Ballerina.toml`;
+				const balPath = `${dirPath}/main.bal`;
+				const tomlResult = _fs().writeFile(tomlPath, DEFAULT_BALLERINA_TOML.replace("{name}", name));
+				const balResult = _fs().writeFile(balPath, DEFAULT_MAIN_BAL);
+				if (!tomlResult || !balResult) return false;
+				get()._syncTrees();
+				return true;
+			},
+
+			setFileOperationDialog(dialog) {
+				set((s) => {
+					s.fileOperationDialog = dialog;
+				});
+			},
+
+			toggleDir(path) {
+				set((s) => {
+					if (s.expandedPaths.has(path)) {
+						s.expandedPaths.delete(path);
+					} else {
+						s.expandedPaths.add(path);
+					}
+				});
+			},
+
+			expandDir(path) {
+				set((s) => {
+					s.expandedPaths.add(path);
+				});
+			},
+
+			collapseDir(path) {
+				set((s) => {
+					s.expandedPaths.delete(path);
+				});
+			},
+
 			_syncTrees() {
 				const fs = _fs();
 				set((s) => {
@@ -181,6 +255,12 @@ export const useActiveFile = () => useFileTreeStore((s) => s.activeFile);
 export const useActiveFilePath = () =>
 	useFileTreeStore((s) => s.activeFile?.path ?? null);
 
+export const useFileOperationDialog = () =>
+	useFileTreeStore((s) => s.fileOperationDialog);
+
+export const useExpandedPaths = () =>
+	useFileTreeStore((s) => s.expandedPaths);
+
 export const useFileTreeActions = () =>
 	useFileTreeStore(
 		useShallow((s) => ({
@@ -194,5 +274,10 @@ export const useFileTreeActions = () =>
 			updateFileContent: s.updateFileContent,
 			createNewFile: s.createNewFile,
 			createNewDir: s.createNewDir,
+			createNewPackage: s.createNewPackage,
+			setFileOperationDialog: s.setFileOperationDialog,
+			toggleDir: s.toggleDir,
+			expandDir: s.expandDir,
+			collapseDir: s.collapseDir,
 		})),
 	);
