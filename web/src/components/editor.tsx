@@ -35,10 +35,21 @@ function WasmLoadingScreen({ progress }: { progress: number }) {
     return (
         <div className="w-full flex items-center justify-center min-h-dvh">
             <div className="flex flex-col items-center gap-3">
-                <div className="text-sm text-muted-foreground">
+                <div
+                    id="wasm-load-progress-label"
+                    className="text-sm text-muted-foreground"
+                    aria-live="polite"
+                >
                     Loading WASM binaries... {pct}%
                 </div>
-                <div className="w-48 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                    className="w-48 h-1.5 rounded-full bg-muted overflow-hidden"
+                    role="progressbar"
+                    aria-labelledby="wasm-load-progress-label"
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                >
                     <div
                         className="h-full bg-emerald-500 transition-[width] duration-150"
                         style={{ width: `${pct}%` }}
