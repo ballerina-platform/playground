@@ -177,7 +177,7 @@ function EditorHeader() {
             <div>
                 <a
                     className="flex items-center gap-2 text-xs text-muted-foreground hover:text-secondary-foreground"
-                    href="https://github.com/ballerina-platform/ballerina-lang-go"
+                    href="https://github.com/ballerina-platform/playground"
                     target="_blank"
                     rel="noopener noreferrer"
                 >
