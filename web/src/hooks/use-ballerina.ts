@@ -11,47 +11,16 @@ export function useBallerina() {
 
         async function load() {
             const go = new window.Go();
-            const res = await fetch("ballerina.wasm");
-            const total = Number(res.headers.get("content-length") ?? 0);
+            const buffer = await fetchWithProgress("ballerina.wasm", (pct) => {
+                if (!cancelled) setProgress(pct);
+            });
 
-            if (!res.body || !total) {
-                const result = await WebAssembly.instantiateStreaming(
-                    res,
-                    go.importObject,
-                );
-                go.run(result.instance);
-                if (!cancelled) {
-                    setProgress(100);
-                    setIsReady(true);
-                }
-                return;
-            }
-
-            const reader = res.body.getReader();
-            let loaded = 0;
-            const chunks: Uint8Array[] = [];
-
-            for (;;) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                if (value) {
-                    chunks.push(value);
-                    loaded += value.byteLength;
-                    if (!cancelled && total) {
-                        setProgress(Math.round((loaded / total) * 100));
-                    }
-                }
-            }
-
-            const bytes = new Uint8Array(loaded);
-            let offset = 0;
-            for (const chunk of chunks) {
-                bytes.set(chunk, offset);
-                offset += chunk.byteLength;
-            }
-
-            const result = await WebAssembly.instantiate(bytes, go.importObject);
+            const result = await WebAssembly.instantiate(
+                buffer,
+                go.importObject,
+            );
             go.run(result.instance);
+
             if (!cancelled) {
                 setProgress(100);
                 setIsReady(true);
@@ -93,4 +62,39 @@ export function useBallerina() {
     }
 
     return { isReady, progress, updateFile, run };
+}
+
+async function fetchWithProgress(
+    url: string,
+    onProgress: (pct: number) => void,
+): Promise<ArrayBuffer> {
+    const res = await fetch(url);
+    const total = Number(res.headers.get("content-length") ?? 0);
+
+    if (!res.body || !total) {
+        return res.arrayBuffer();
+    }
+
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let loaded = 0;
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+            chunks.push(value);
+            loaded += value.byteLength;
+            onProgress(Math.round((loaded / total) * 100));
+        }
+    }
+
+    const bytes = new Uint8Array(loaded);
+    let offset = 0;
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+
+    return bytes.buffer;
 }
