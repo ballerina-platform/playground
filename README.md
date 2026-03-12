@@ -1,6 +1,6 @@
 # Ballerina Playground
 
-Ballerina playground is a web based tool which allows trying out language features.
+Ballerina playground is a web based tool for trying out language features, hosted at https://play.ballerina.io/, with the native Ballerina interpreter source at https://github.com/ballerina-platform/ballerina-lang-go.
 
 ## Getting started
 
