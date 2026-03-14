@@ -2,99 +2,86 @@ import "@/wasm_exec";
 
 import * as React from "react";
 
+import { useFS } from "@/providers/fs-provider";
+
 export function useBallerina() {
-    const [isReady, setIsReady] = React.useState(false);
-    const [progress, setProgress] = React.useState(0);
+	const fs = useFS();
 
-    React.useEffect(() => {
-        let cancelled = false;
+	const [isReady, setIsReady] = React.useState(false);
+	const [progress, setProgress] = React.useState(0);
 
-        async function load() {
-            const go = new window.Go();
-            const buffer = await fetchWithProgress("ballerina.wasm", (pct) => {
-                if (!cancelled) setProgress(pct);
-            });
+	React.useEffect(() => {
+		let cancelled = false;
 
-            const result = await WebAssembly.instantiate(
-                buffer,
-                go.importObject,
-            );
-            go.run(result.instance);
+		async function load() {
+			const go = new window.Go();
 
-            if (!cancelled) {
-                setProgress(100);
-                setIsReady(true);
-            }
-        }
+			const result = await WebAssembly.instantiateStreaming(
+				fetchResponseWithProgress("ballerina.wasm", (pct) => {
+					if (!cancelled) setProgress(pct);
+				}),
+				go.importObject,
+			);
 
-        load().catch(() => {
-            if (!cancelled) setIsReady(false);
-        });
+			go.run(result.instance);
 
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+			if (!cancelled) {
+				setProgress(100);
+				setIsReady(true);
+			}
+		}
 
-    function updateFile(
-        path: string,
-        content: string,
-    ): { error?: string } | null {
-        if (typeof window.updateFile !== "function") {
-            return { error: "Ballerina runtime is not ready" };
-        }
-        const result = window.updateFile(path, content);
-        if (result && typeof result === "object" && "error" in result) {
-            return result as { error?: string };
-        }
-        return null;
-    }
+		load().catch(() => {
+			if (!cancelled) setIsReady(false);
+		});
 
-    function run(path: string): { error?: string } | null {
-        if (typeof window.run !== "function") {
-            return { error: "Ballerina runtime is not ready" };
-        }
-        const result = window.run(path);
-        if (result && typeof result === "object" && "error" in result) {
-            return result as { error?: string };
-        }
-        return null;
-    }
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
-    return { isReady, progress, updateFile, run };
+	function run(path: string): { error?: string } | null {
+		if (typeof window.run !== "function")
+			return { error: "Ballerina runtime is not ready" };
+		if (!fs) return { error: "Virtual file system is not available" };
+
+		const result = window.run(fs, path);
+		if (result && typeof result === "object" && "error" in result) {
+			return result as { error?: string };
+		}
+		return null;
+	}
+
+	return { isReady, progress, run };
 }
 
-async function fetchWithProgress(
-    url: string,
-    onProgress: (pct: number) => void,
-): Promise<ArrayBuffer> {
-    const res = await fetch(url);
-    const total = Number(res.headers.get("content-length") ?? 0);
+async function fetchResponseWithProgress(
+	url: string,
+	onProgress: (pct: number) => void,
+): Promise<Response> {
+	const res = await fetch(url);
+	const total = Number(res.headers.get("content-length") ?? 0);
 
-    if (!res.body || !total) {
-        return res.arrayBuffer();
-    }
+	if (!res.body || !total) return res;
 
-    const reader = res.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let loaded = 0;
+	const reader = res.body.getReader();
+	const stream = new ReadableStream({
+		async start(controller) {
+			let loaded = 0;
+			for (;;) {
+				const { done, value } = await reader.read();
+				if (done) {
+					controller.close();
+					break;
+				}
+				if (value) {
+					loaded += value.byteLength;
+					onProgress(Math.round((loaded / total) * 100));
+					controller.enqueue(value);
+				}
+			}
+		},
+	});
 
-    for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-            chunks.push(value);
-            loaded += value.byteLength;
-            onProgress(Math.round((loaded / total) * 100));
-        }
-    }
-
-    const bytes = new Uint8Array(loaded);
-    let offset = 0;
-    for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength;
-    }
-
-    return bytes.buffer;
+	return new Response(stream, { headers: res.headers });
 }

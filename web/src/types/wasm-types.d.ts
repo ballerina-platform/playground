@@ -1,9 +1,8 @@
-declare global {
-    export interface Window {
-        Go: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-        updateFile(path: string, content: string): { error?: string } | null;
-        run(path: string): { error?: string } | null;
-    }
-}
+import type { FS } from "@/lib/fs/core/fs.interface";
 
-export {};
+declare global {
+	export interface Window {
+		Go: any; 
+		run(proxy: FS, path: string): { error?: string } | null;
+	}
+}

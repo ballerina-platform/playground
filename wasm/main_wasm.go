@@ -17,50 +17,36 @@
 package main
 
 import (
-	"ballerina-lang-go/common/bfs"
 	_ "ballerina-lang-go/lib/rt"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 	"fmt"
-	"io/fs"
 	"os"
 	"syscall/js"
 )
 
-var fsys fs.FS
-
 func main() {
-	fsys = bfs.NewMemFS()
-
-	js.Global().Set("updateFile", js.FuncOf(updateFile))
 	js.Global().Set("run", js.FuncOf(run))
 
 	select {}
 }
 
-func updateFile(this js.Value, args []js.Value) any {
-	if len(args) < 2 {
-		return jsError(fmt.Errorf("file path and content arguments are required"))
-	}
-
-	path := args[0].String()
-	content := args[1].String()
-
-	err := bfs.WriteFile(fsys, path, []byte(content), 0o644)
-	if err != nil {
-		return jsError(err)
-	}
-
-	return nil
-}
-
 func run(this js.Value, args []js.Value) any {
-	if len(args) < 1 {
-		return jsError(fmt.Errorf("file path argument is required"))
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", r)
+		}
+	}()
+
+	if len(args) < 2 {
+		return jsError(fmt.Errorf("expected at least 2 arguments: (fsProxy, path)"))
 	}
 
-	path := args[0].String()
+	proxy := args[0]
+	path := args[1].String()
+
+	fsys := NewLocalStorageFS(proxy)
 
 	result, err := directory.LoadProject(fsys, path)
 	if err != nil {
