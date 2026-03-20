@@ -7,12 +7,15 @@ import { RouterProvider, createRouter } from "@tanstack/react-router"
 
 import { enableMapSet } from "immer";
 
+import { getRouterBasePath } from "@/lib/router-utils";
+
 import { routeTree } from "@/routeTree.gen";
 
 enableMapSet();
 
 const router = createRouter({
 	routeTree,
+	basepath: getRouterBasePath(import.meta.env.BASE_URL),
 	defaultPreload: "intent"
 });
 
