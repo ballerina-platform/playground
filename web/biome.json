@@ -12,7 +12,8 @@
 			"!!src/main.tsx",
 			"!!src/assets/**/*",
 			"!!src/wasm_exec.js",
-			"!!src/types/wasm-types.d.ts"
+			"!!src/types/wasm-types.d.ts",
+			"!!**/routeTree.gen.ts"
 		]
 	},
 	"formatter": {
