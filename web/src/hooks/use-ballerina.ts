@@ -16,8 +16,13 @@ export function useBallerina() {
 		async function load() {
 			const go = new window.Go();
 
+			const wasmUrl = new URL(
+				"ballerina.wasm",
+				new URL(import.meta.env.BASE_URL, window.location.origin),
+			).toString();
+
 			const result = await WebAssembly.instantiateStreaming(
-				fetchResponseWithProgress("ballerina.wasm", (pct) => {
+				fetchResponseWithProgress(wasmUrl, (pct) => {
 					if (!cancelled) setProgress(pct);
 				}),
 				go.importObject,
