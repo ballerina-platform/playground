@@ -7,4 +7,8 @@ export class EphemeralFS extends AbstractFS {
 		super();
 		this._seed(initial);
 	}
+
+	insertSubtree(parentPrefix: string, root: FileNode) {
+		this._seed([root], parentPrefix);
+	}
 }

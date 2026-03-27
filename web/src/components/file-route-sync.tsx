@@ -1,94 +1,104 @@
 import * as React from "react";
 
+import { ShareNoticeDialog } from "@/components/share-notice-dialog";
+
 import { useParams, useNavigate } from "@tanstack/react-router";
 
-import { useFileTreeStore, useFileTreeActions } from "@/stores/file-tree-store";
+import {
+	useFileTreeActions,
+	useFileTreeStore,
+	useActiveFilePath,
+} from "@/stores/file-tree-store";
 
-const DEFAULT_FILE = "/tmp/01-orders.bal";
+import { useShare } from "@/hooks/use-share";
+
+const DEFAULT_FILE = "/tmp/examples/01-orders.bal";
 const DEFAULT_SPLAT = DEFAULT_FILE.replace(/^\/+/, "");
 
-function normalizeSplat(splat: string | undefined) {
-	if (!splat) return null;
-	const trimmed = splat.trim();
-	if (!trimmed) return null;
-	return trimmed.replace(/^\/+/, "");
+function normalizeSplat(splat: string | undefined): string | null {
+	const trimmed = splat?.trim();
+	return trimmed ? trimmed.replace(/^\/+/, "") : null;
 }
 
-function filePathFromSplat(splat: string | undefined) {
+function filePathFromSplat(splat: string | undefined): string | null {
 	const normalized = normalizeSplat(splat);
-	if (!normalized) return null;
-	return `/${normalized}`;
+	return normalized ? `/${normalized}` : null;
 }
 
-function splatFromFilePath(filePath: string) {
-	const trimmed = filePath.trim();
-	if (!trimmed) return DEFAULT_SPLAT;
-	const splat = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed;
+function splatFromFilePath(filePath: string): string {
+	const splat = filePath.startsWith("/") ? filePath.slice(1) : filePath;
 	return splat || DEFAULT_SPLAT;
 }
 
 export function FileRouteSync({ children }: React.PropsWithChildren) {
-	const params = useParams({ strict: false }) as { _splat?: string };
-	const navigate = useNavigate();
+	const { _splat: splat } = useParams({ strict: false }) as { _splat?: string };
+	const navigate = useNavigate({ from: "/$" });
+
+	const { isProcessingShare, shareNotice } = useShare();
 
 	const ready = useFileTreeStore((s) => s.ready);
-	const activeFilePath = useFileTreeStore((s) => s.activeFile?.path ?? null);
+	const activeFilePath = useActiveFilePath();
 	const { openFile, existsFile } = useFileTreeActions();
 
-	const splat = params._splat;
+	const currentSplat = normalizeSplat(splat) ?? "";
+	const filePathFromUrl = filePathFromSplat(splat);
 
-	const currentSplat = React.useMemo(
-		() => normalizeSplat(splat) ?? "",
-		[splat],
-	);
-	const filePathFromUrl = React.useMemo(
-		() => filePathFromSplat(splat),
-		[splat],
-	);
-	const targetSplat = React.useMemo(
-		() => (activeFilePath ? splatFromFilePath(activeFilePath) : null),
-		[activeFilePath],
-	);
+	const activeFilePathRef = React.useRef(activeFilePath);
+	React.useLayoutEffect(() => {
+		activeFilePathRef.current = activeFilePath;
+	});
 
-	const openDefaultFileAndSyncRoute = React.useCallback(() => {
-		if (existsFile(DEFAULT_FILE)) {
-			openFile(DEFAULT_FILE);
-			navigate({
-				to: "/$",
-				params: { _splat: DEFAULT_SPLAT },
-				replace: true,
-			});
-		}
-	}, [openFile, existsFile, navigate]);
+	const clearedByDeletionRef = React.useRef(false);
 
 	React.useEffect(() => {
-		if (!ready) return;
+		if (!ready || isProcessingShare) return;
 
-		if (!filePathFromUrl) {
-			openDefaultFileAndSyncRoute();
+		const activePath = activeFilePathRef.current;
+
+		if (filePathFromUrl && existsFile(filePathFromUrl)) {
+			if (filePathFromUrl !== activePath) openFile(filePathFromUrl);
 			return;
 		}
 
-		if (existsFile(filePathFromUrl)) openFile(filePathFromUrl);
-		else openDefaultFileAndSyncRoute();
+		if (clearedByDeletionRef.current) {
+			clearedByDeletionRef.current = false;
+			return;
+		}
+
+		if (!activePath) {
+			openFile(DEFAULT_FILE);
+			navigate({ to: "/$", params: { _splat: DEFAULT_SPLAT }, replace: true });
+		}
 	}, [
 		ready,
+		isProcessingShare,
 		filePathFromUrl,
 		existsFile,
 		openFile,
-		openDefaultFileAndSyncRoute,
+		navigate,
 	]);
 
 	React.useEffect(() => {
-		if (!ready || !activeFilePath || !targetSplat) return;
-		if (targetSplat !== currentSplat) {
-			navigate({
-				to: "/$",
-				params: { _splat: targetSplat },
-				replace: true,
-			});
-		}
-	}, [ready, activeFilePath, targetSplat, currentSplat, navigate]);
+		if (!ready || isProcessingShare) return;
 
-	return children;
+		const expectedSplat = activeFilePath
+			? splatFromFilePath(activeFilePath)
+			: "";
+
+		if (expectedSplat !== currentSplat) {
+			if (!activeFilePath) clearedByDeletionRef.current = true;
+			navigate({ to: "/$", params: { _splat: expectedSplat }, replace: true });
+		}
+	}, [ready, isProcessingShare, activeFilePath, currentSplat, navigate]);
+
+	return (
+		<>
+			{children}
+			<ShareNoticeDialog
+				open={shareNotice.open}
+				onDismiss={shareNotice.dismiss}
+				onDismissPermanently={shareNotice.dismissPermanently}
+			/>
+		</>
+	);
 }

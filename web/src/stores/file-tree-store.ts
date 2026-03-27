@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { immer } from "zustand/middleware/immer";
 
+import { ancestorDirPathsForFile } from "@/lib/fs/core/path-utils";
+
 import type { LayeredFS } from "@/lib/fs/layered-fs";
 import type { FileNode } from "@/lib/fs/core/file-node.types";
 
@@ -30,7 +32,9 @@ export type FileOperationDialog = {
 		| "rename-file"
 		| "rename-folder"
 		| "delete-file"
-		| "delete-folder";
+		| "delete-folder"
+		| "fork-file"
+		| "fork-folder";
 	path: string;
 	defaultName?: string;
 } | null;
@@ -75,6 +79,11 @@ type FileTreeActions = {
 	collapseDir(path: string): void;
 
 	_syncTrees(): void;
+
+	loadSharedFiles(
+		root: FileNode,
+		openRelativePath?: string | null,
+	): { loaded: boolean; openPath: string | null };
 };
 
 export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
@@ -108,12 +117,14 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 			openFile(path) {
 				const file = _fs().open(path);
 				if (!file) return;
+				const dirs = ancestorDirPathsForFile(path);
 				set((s) => {
 					s.activeFile = {
 						path,
 						content: file.content,
 						dirty: false,
 					};
+					for (const d of dirs) s.expandedPaths.add(d);
 				});
 			},
 
@@ -152,11 +163,19 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 				set((s) => {
 					if (!s.activeFile) return;
 					const currentPath = s.activeFile.path;
+					let moved = false;
 					if (currentPath === oldPath) {
 						s.activeFile.path = newPath;
+						moved = true;
 					} else if (currentPath.startsWith(`${oldPath}/`)) {
 						const suffix = currentPath.slice(oldPath.length);
 						s.activeFile.path = newPath + suffix;
+						moved = true;
+					}
+					if (moved) {
+						for (const d of ancestorDirPathsForFile(s.activeFile.path)) {
+							s.expandedPaths.add(d);
+						}
 					}
 				});
 				get()._syncTrees();
@@ -276,6 +295,22 @@ export const useFileTreeStore = create<FileTreeState & FileTreeActions>()(
 					s.localTree = fs.localTree();
 				});
 			},
+
+			loadSharedFiles(
+				root: FileNode,
+				openRelativePath?: string | null,
+			): { loaded: boolean; openPath: string | null } {
+				try {
+					const openPath = _fs().graftSharedTree(root, openRelativePath);
+					set((s) => {
+						s.tempTree = _fs().tempTree();
+						s.localTree = _fs().localTree();
+					});
+					return { loaded: true, openPath };
+				} catch {
+					return { loaded: false, openPath: null };
+				}
+			},
 		};
 	}),
 );
@@ -312,5 +347,6 @@ export const useFileTreeActions = () =>
 			toggleDir: s.toggleDir,
 			expandDir: s.expandDir,
 			collapseDir: s.collapseDir,
+			loadSharedFiles: s.loadSharedFiles,
 		})),
 	);

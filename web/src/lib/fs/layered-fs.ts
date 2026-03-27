@@ -1,11 +1,17 @@
-import { isRootPath, isUnder } from "@/lib/fs/core/path-utils";
+import { firstFilePathInSubtree } from "@/lib/fs/core/file-node-utils";
+import {
+	isRootPath,
+	isSafeRelativePath,
+	isUnder,
+	join,
+} from "@/lib/fs/core/path-utils";
+
+import { LOCAL_ROOT, SHARED_ROOT, TEMP_ROOT } from "@/lib/fs/fs-roots";
 
 import type { FS } from "@/lib/fs/core/fs.interface";
 import type { EphemeralFS } from "@/lib/fs/ephemeral-fs";
 import type { LocalStorageFS } from "@/lib/fs/local-storage-fs";
-
-export const TEMP_ROOT = "/tmp";
-export const LOCAL_ROOT = "/local";
+import type { FileNode } from "@/lib/fs/core/file-node.types";
 
 export type Namespace = "temp" | "local";
 
@@ -60,11 +66,27 @@ export class LayeredFS implements FS {
 	}
 
 	tempTree() {
-		return this.temp.transformToTree("/tmp");
+		return this.temp.transformToTree(TEMP_ROOT);
 	}
 
 	localTree() {
 		return this.local.transformToTree("/local");
+	}
+
+	graftSharedTree(
+		root: FileNode,
+		openRelativePath?: string | null,
+	): string | null {
+		this.temp.insertSubtree(SHARED_ROOT, root);
+
+		const trimmed = openRelativePath?.trim();
+		if (trimmed && isSafeRelativePath(trimmed)) {
+			const candidate = join(SHARED_ROOT, trimmed);
+			const info = this.stat(candidate);
+			if (info && !info.isDir) return candidate;
+		}
+
+		return firstFilePathInSubtree(root, SHARED_ROOT);
 	}
 
 	private _moveToTarget(

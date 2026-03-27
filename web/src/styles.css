@@ -38,7 +38,7 @@
 	--sidebar-accent-foreground: oklch(0.205 0 0);
 	--sidebar-border: oklch(0.922 0 0);
 	--sidebar-ring: oklch(0.708 0 0);
-	/* ANSI foreground palette */
+
 	--ansi-fg-black: #6b7280;
 	--ansi-fg-red: #dc2626;
 	--ansi-fg-green: #16a34a;
@@ -152,13 +152,10 @@
 
 @layer base {
 	* {
-		@apply border-border outline-ring/50;
+		@apply border-border outline-ring/50 font-sans;
 	}
 	body {
 		@apply font-sans bg-background text-foreground;
-	}
-	html {
-		@apply font-sans;
 	}
 }
 
