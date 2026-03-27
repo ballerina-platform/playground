@@ -33,9 +33,9 @@ func main() {
 			os.Stderr,
 			`Usage: %s <input_dir> <output_json>
 			
-Generates a FileNode[] JSON array from the direct children of <input_dir>,
-wrapped in a "tmp" root directory. Only includes .bal and .toml files;
-skips empty directories.
+Generates a FileNode[] JSON array by recursively walking <input_dir>,
+wrapped under a "tmp/examples" root directory. Only includes .bal and .toml
+files; skips empty directories.
 `,
 			filepath.Base(os.Args[0]),
 		)
@@ -110,7 +110,7 @@ func run(args []string) error {
 		return err
 	}
 
-	nodes = []Node{Dir("tmp", nodes)}
+	nodes = []Node{Dir("tmp", []Node{Dir("examples", nodes)})}
 
 	if err := writeJSON(outputPath, nodes); err != nil {
 		return err
