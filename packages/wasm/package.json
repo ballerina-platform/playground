@@ -1,0 +1,8 @@
+{
+    "name": "@playground/wasm",
+    "private": true,
+    "scripts": {
+        "clean": "rm -rf dist",
+        "build": "GOOS=js GOARCH=wasm go build -o dist/ballerina.wasm ."
+    }
+}

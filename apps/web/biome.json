@@ -1,0 +1,21 @@
+{
+	"root": false,
+	"extends": "//",
+	"files": {
+		"includes": [
+			"**",
+			"!!**/dist",
+			"!!src/main.tsx",
+			"!!src/assets/**/*",
+			"!!src/wasm_exec.js",
+			"!!src/types/wasm-types.d.ts",
+			"!!**/routeTree.gen.ts"
+		]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true,
+			"cssModules": true
+		}
+	}
+}
