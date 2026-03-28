@@ -1,0 +1,19 @@
+{
+	"extends": ["//"],
+	"tasks": {
+		"copy:wasm": {
+			"dependsOn": ["@playground/wasm#build"],
+			"inputs": ["../../packages/wasm/dist/ballerina.wasm"],
+			"outputs": ["public/ballerina.wasm"]
+		},
+		"build": {
+			"dependsOn": ["^build", "copy:wasm"],
+			"outputs": ["dist/**"]
+		},
+		"dev": {
+			"dependsOn": ["copy:wasm"],
+			"cache": false,
+			"persistent": true
+		}
+	}
+}
