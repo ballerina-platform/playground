@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"strings"
 )
 
@@ -115,8 +116,19 @@ func printDiagnosticLocation(w io.Writer, s outputStyle, loc diagnosticLocation)
 	}
 }
 
+func snippetSourcePath(fsys fs.FS, projectOrFilePath, diagFile string) string {
+	if projectOrFilePath == "" {
+		return diagFile
+	}
+	info, err := fs.Stat(fsys, projectOrFilePath)
+	if err == nil && !info.IsDir() {
+		return projectOrFilePath
+	}
+	return path.Join(projectOrFilePath, diagFile)
+}
+
 func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys fs.FS, severityColor string, path string) {
-	content, err := fs.ReadFile(fsys, path)
+	content, err := fs.ReadFile(fsys, snippetSourcePath(fsys, path, loc.filePath))
 	if err != nil {
 		fmt.Fprintf(w, "%*s %s|%s %sCould not read source file: %v%s\n", loc.numWidth, "", s.cyan, s.reset, severityColor, err, s.reset)
 		return
