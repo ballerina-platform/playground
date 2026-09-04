@@ -7,16 +7,17 @@ import (
 )
 
 type wasmListenerHandle struct {
+	run *runContext
 	cfg pal.ServerConfig
 }
 
 func (w *wasmListenerHandle) Close() error {
-	activeRun.unregisterListener(w.cfg)
+	w.run.unregisterListener(w.cfg)
 	return nil
 }
 
 func (w *wasmListenerHandle) Shutdown(ctx context.Context) error {
-	activeRun.unregisterListener(w.cfg)
+	w.run.unregisterListener(w.cfg)
 	return nil
 }
 

@@ -10,7 +10,8 @@ import (
 )
 
 func TestRunContextListenerLifecycle(t *testing.T) {
-	ctx := useTestRunContext(t)
+	t.Parallel()
+	ctx := newTestRunContext()
 	cfg := pal.ServerConfig{Host: "localhost", Port: 9090}
 	firstHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("first handler"))
@@ -56,7 +57,8 @@ func TestRunContextListenerLifecycle(t *testing.T) {
 }
 
 func TestRunContextHostsAreSorted(t *testing.T) {
-	ctx := useTestRunContext(t)
+	t.Parallel()
+	ctx := newTestRunContext()
 	for _, cfg := range []pal.ServerConfig{
 		{Host: "localhost", Port: 9091},
 		{Host: "localhost", Port: 9090},
@@ -72,6 +74,7 @@ func TestRunContextHostsAreSorted(t *testing.T) {
 }
 
 func TestListenerHostFormatsIPv6(t *testing.T) {
+	t.Parallel()
 	cfg := pal.ServerConfig{Host: "::1", Port: 9090}
 	if got, want := listenerHost(cfg), "[::1]:9090"; got != want {
 		t.Errorf("listener host = %q, want %q", got, want)

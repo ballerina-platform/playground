@@ -10,16 +10,8 @@ import (
 	"testing"
 )
 
-func useTestRunContext(t *testing.T) *runContext {
-	t.Helper()
-
-	previous := activeRun
-	ctx := &runContext{listeners: make(map[string]http.Handler)}
-	activeRun = ctx
-	t.Cleanup(func() {
-		activeRun = previous
-	})
-	return ctx
+func newTestRunContext() *runContext {
+	return &runContext{listeners: make(map[string]http.Handler)}
 }
 
 func registerTestHandler(t *testing.T, ctx *runContext, cfg pal.ServerConfig, handler http.Handler) {
@@ -31,7 +23,8 @@ func registerTestHandler(t *testing.T, ctx *runContext, cfg pal.ServerConfig, ha
 }
 
 func TestExecuteLocalRequest(t *testing.T) {
-	ctx := useTestRunContext(t)
+	t.Parallel()
+	ctx := newTestRunContext()
 	cfg := pal.ServerConfig{Host: "0.0.0.0", Port: 9090}
 	var received *http.Request
 	var receivedBody []byte
@@ -44,7 +37,7 @@ func TestExecuteLocalRequest(t *testing.T) {
 		_, _ = w.Write([]byte("response body"))
 	}))
 
-	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: -1}}}
+	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: -1}}, run: ctx}
 	status, headers, body, handled, err := client.executeLocalRequest(
 		context.Background(),
 		http.MethodPost,
@@ -100,7 +93,8 @@ func TestExecuteLocalRequest(t *testing.T) {
 }
 
 func TestExecuteLocalRequestResolvesLoopbackAliases(t *testing.T) {
-	ctx := useTestRunContext(t)
+	t.Parallel()
+	ctx := newTestRunContext()
 	registerTestHandler(t, ctx, pal.ServerConfig{Host: "0.0.0.0", Port: 9090}, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ipv4"))
 	}))
@@ -108,7 +102,7 @@ func TestExecuteLocalRequestResolvesLoopbackAliases(t *testing.T) {
 		_, _ = w.Write([]byte("ipv6"))
 	}))
 
-	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: -1}}}
+	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: -1}}, run: ctx}
 	for _, tc := range []struct {
 		url  string
 		want string
@@ -137,7 +131,8 @@ func TestExecuteLocalRequestResolvesLoopbackAliases(t *testing.T) {
 }
 
 func TestExecuteLocalRequestFallsBackWhenNotHandled(t *testing.T) {
-	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: -1}}}
+	t.Parallel()
+	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: -1}}, run: newTestRunContext()}
 	for _, tc := range []struct {
 		name string
 		url  string
@@ -158,12 +153,13 @@ func TestExecuteLocalRequestFallsBackWhenNotHandled(t *testing.T) {
 }
 
 func TestExecuteLocalRequestRejectsOversizedResponse(t *testing.T) {
-	ctx := useTestRunContext(t)
+	t.Parallel()
+	ctx := newTestRunContext()
 	registerTestHandler(t, ctx, pal.ServerConfig{Host: "localhost", Port: 9090}, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("too large"))
 	}))
 
-	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: 3}}}
+	client := &fetchHTTPClient{cfg: pal.ClientConfig{ResponseLimits: pal.ResponseLimitConfig{MaxEntityBodySize: 3}}, run: ctx}
 	_, _, _, handled, err := client.executeLocalRequest(context.Background(), http.MethodGet, "http://localhost:9090", nil, "", nil)
 	if !handled {
 		t.Fatal("expected loopback request to be handled")
@@ -174,6 +170,7 @@ func TestExecuteLocalRequestRejectsOversizedResponse(t *testing.T) {
 }
 
 func TestHTTPRequestsFromJS(t *testing.T) {
+	t.Parallel()
 	req, err := httpRequestFromJS(js.ValueOf(map[string]any{
 		"method": "post",
 		"host":   "localhost:9090",
