@@ -16,6 +16,7 @@ import (
 
 type fetchHTTPClient struct {
 	cfg pal.ClientConfig
+	run *runContext
 }
 
 type requestContext struct {
@@ -76,7 +77,7 @@ func (c *fetchHTTPClient) executeLocalRequest(ctx context.Context, method, targe
 	}
 
 	// Intentionally ignore the scheme for loopback requests; TLS is not supported.
-	handler, ok := findLocalHandler(parsed)
+	handler, ok := findLocalHandler(c.run, parsed)
 	if !ok {
 		return 0, nil, nil, false, nil
 	}
@@ -126,7 +127,11 @@ func isLocalHTTPHost(host string) bool {
 	}
 }
 
-func findLocalHandler(parsed *url.URL) (http.Handler, bool) {
+func findLocalHandler(run *runContext, parsed *url.URL) (http.Handler, bool) {
+	if run == nil {
+		run = activeRun
+	}
+
 	candidates := []string{parsed.Host}
 	if port := parsed.Port(); port != "" {
 		candidates = append(
@@ -137,7 +142,7 @@ func findLocalHandler(parsed *url.URL) (http.Handler, bool) {
 		)
 	}
 	for _, candidate := range candidates {
-		if handler, ok := activeRun.getHandler(candidate); ok {
+		if handler, ok := run.getHandler(candidate); ok {
 			return handler, true
 		}
 	}

@@ -97,7 +97,7 @@ func (c *runContext) registerListener(cfg pal.ServerConfig, handler http.Handler
 		return nil, fmt.Errorf("listener already registered for host %s", host)
 	}
 	c.listeners[host] = handler
-	return &wasmListenerHandle{cfg: cfg}, nil
+	return &wasmListenerHandle{run: c, cfg: cfg}, nil
 }
 
 func (c *runContext) unregisterListener(cfg pal.ServerConfig) {

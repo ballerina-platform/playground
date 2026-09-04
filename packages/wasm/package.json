@@ -3,6 +3,7 @@
 	"private": true,
 	"scripts": {
 		"build": "GOOS=js GOARCH=wasm go build -o dist/ballerina.wasm . && ./scripts/gen-meta.sh",
+		"test": "GOOS=js GOARCH=wasm go test -exec=\"$(go env GOROOT)/lib/wasm/go_js_wasm_exec\" .",
 		"clean": "git clean -xdf .turbo dist"
 	}
 }

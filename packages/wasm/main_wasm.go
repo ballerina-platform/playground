@@ -165,7 +165,7 @@ func dispatchHttpRequest(_ js.Value, args []js.Value) any {
 			return
 		}
 
-		handler, ok := findLocalHandler(req.URL)
+		handler, ok := findLocalHandler(activeRun, req.URL)
 		if !ok {
 			reject.Invoke(js.ValueOf(fmt.Sprintf("no service listening on %s", req.Host)))
 			return
